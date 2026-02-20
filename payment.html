@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ชำระเงิน - MyCourse</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+</head>
+<body class="bg-light">
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card shadow-lg border-0 rounded-4">
+                    <div class="card-header bg-primary text-white text-center py-3">
+                        <h4 class="mb-0">สรุปการชำระเงิน</h4>
+                    </div>
+                    <div class="card-body p-4 text-center">
+                        <h5 class="text-muted">คุณกำลังสมัครคอร์ส</h5>
+                        <h3 id="payCourseName" class="fw-bold text-primary">---</h3>
+                        
+                        <div class="badge bg-info-subtle text-info mb-3 px-3 py-2 rounded-pill">
+                            <i class="bi bi-person-badge me-1"></i> ครูผู้สอน: <span id="payInstructorName">---</span>
+                        </div>
+
+                        <hr>
+                        <div class="d-flex justify-content-between mb-3 px-3">
+                            <span class="text-muted">ราคาหลักสูตร:</span>
+                            <span class="fw-bold text-dark fs-5">฿<span id="payAmount">0</span></span>
+                        </div>
+                        
+                        <div class="bg-white p-3 border rounded-4 mb-4 shadow-sm">
+                            <img id="qrCodeImg" src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=PromptPay" alt="QR Code" class="img-fluid" style="max-width: 200px;">
+                            <p class="small text-muted mt-2 mb-0"><i class="bi bi-qr-code-scan me-1"></i> สแกนจ่ายผ่านแอปธนาคารทุกแห่ง</p>
+                        </div>
+
+                        <div class="alert alert-warning py-2 small mb-4" role="alert">
+                            <i class="bi bi-info-circle me-1"></i> หลังจากโอนเงินแล้ว กรุณากดปุ่มยืนยันเพื่อแจ้งเจ้าหน้าที่
+                        </div>
+
+                        <button id="btnConfirmPayment" class="btn btn-success w-100 btn-lg rounded-pill shadow-sm fw-bold">
+                            ยืนยันการโอนเงิน
+                        </button>
+                        <a href="courses.html" class="btn btn-link mt-3 text-decoration-none text-muted">
+                            <i class="bi bi-arrow-left"></i> กลับไปเลือกคอร์สใหม่
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/config.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // 1. ดึงข้อมูลการสมัครชั่วคราวจาก SessionStorage
+            const enrollData = JSON.parse(sessionStorage.getItem('pendingEnroll'));
+            
+            // ถ้าไม่มีข้อมูล ให้เด้งกลับหน้าเลือกคอร์ส
+            if (!enrollData) { 
+                window.location.href = 'courses.html'; 
+                return; 
+            }
+
+            // 2. แสดงข้อมูลบนหน้าจอให้ถูกต้องตาม Key ที่ส่งมาจาก courses.js
+            document.getElementById('payCourseName').innerText = enrollData.course_name;
+            document.getElementById('payAmount').innerText = enrollData.price.toLocaleString();
+            
+            // แสดงชื่อครู (ใช้ instructor_name ตามที่ส่งมาจากหน้า courses.js)
+            const instructorDisplay = enrollData.instructor_name || "ไม่ระบุ";
+            document.getElementById('payInstructorName').innerText = instructorDisplay;
+
+            // ปรับแต่ง QR Code ให้แสดงราคา (Optional)
+            const qrImg = document.getElementById('qrCodeImg');
+            qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=PromptPay_Amount_${enrollData.price}`;
+
+            const btnConfirm = document.getElementById('btnConfirmPayment');
+
+            // 3. ฟังก์ชันเมื่อกดปุ่มยืนยัน
+            btnConfirm.addEventListener('click', async () => {
+                // ป้องกันการกดซ้ำ
+                btnConfirm.disabled = true;
+                btnConfirm.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>กำลังบันทึกข้อมูล...`;
+
+                try {
+                    // บันทึกข้อมูลลงตาราง enrollments (ใช้ชื่อคอลัมน์ให้ตรงกับ Schema)
+                    const { error } = await supabaseClient.from('enrollments').insert([{
+                        course_name: enrollData.course_name,
+                        fullname: enrollData.fullname,
+                        email: enrollData.email,
+                        phone: enrollData.phone,
+                        price: enrollData.price, // บันทึกราคาลงไปด้วย
+                        instructor_name: enrollData.instructor_name, // บันทึกชื่อครู
+                        status: 'pending_check'
+                    }]);
+
+                    if (error) throw error;
+
+                    // สำเร็จ!
+                    alert(`✅ แจ้งโอนเงินสำเร็จ!\nวิชา: ${enrollData.course_name}\nครูผู้สอน: ${instructorDisplay}\nเจ้าหน้าที่จะตรวจสอบภายใน 24 ชม.`);
+                    
+                    // ล้างข้อมูลชั่วคราวและกลับหน้าหลัก
+                    sessionStorage.removeItem('pendingEnroll');
+                    window.location.href = 'index.html';
+
+                } catch (err) {
+                    // กรณีเกิด Error
+                    alert("❌ เกิดข้อผิดพลาด: " + err.message);
+                    btnConfirm.disabled = false;
+                    btnConfirm.innerText = "ยืนยันการโอนเงิน";
+                }
+            });
+        });
+    </script>
+</body>
+</html>

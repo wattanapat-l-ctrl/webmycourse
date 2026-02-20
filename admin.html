@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - MyCourse Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --sidebar-width: 250px; }
+        body { background-color: #f4f7f6; font-family: 'Sarabun', 'Segoe UI', sans-serif; scroll-behavior: smooth; }
+        .sidebar { width: var(--sidebar-width); height: 100vh; position: fixed; background: #212529; color: white; transition: all 0.3s; z-index: 1000; }
+        .sidebar .nav-link { color: rgba(255,255,255,0.7); padding: 12px 20px; border-radius: 0; cursor: pointer; }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active { color: white; background: rgba(255,255,255,0.1); border-left: 4px solid #0d6efd; }
+        .main-content { margin-left: var(--sidebar-width); padding: 30px; }
+        .card { border: none; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .stat-card { transition: transform 0.2s; border-left: 5px solid #0d6efd; }
+        .stat-card:hover { transform: translateY(-5px); }
+        .table-responsive { max-height: 420px; overflow-y: auto; }
+        .table thead th { position: sticky; top: 0; background-color: #f8f9fa !important; z-index: 10; }
+        
+        /* สไตล์สำหรับ Canvas เกียรติบัตร */
+        #certCanvas { 
+            max-width: 100%; 
+            height: auto; 
+            border: 1px solid #eee; 
+            border-radius: 8px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
+        }
+
+        @media (max-width: 768px) { 
+            .sidebar { margin-left: calc(-1 * var(--sidebar-width)); } 
+            .main-content { margin-left: 0; } 
+            .sidebar.show { margin-left: 0; } 
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar d-flex flex-column p-3">
+        <h4 class="text-center mb-4 fw-bold text-primary">MyCourse</h4>
+        <hr>
+        <ul class="nav nav-pills flex-column mb-auto">
+            <li class="nav-item"><a href="#" class="nav-link active"><i class="bi bi-speedometer2 me-2"></i> แผงควบคุม</a></li>
+            <li><a href="#section-courses" class="nav-link text-white"><i class="bi bi-book me-2"></i> จัดการคอร์ส</a></li>
+            <li><a href="#section-enroll" class="nav-link text-white"><i class="bi bi-people me-2"></i> การสมัครเรียน</a></li>
+            <li><a href="#section-users" class="nav-link text-white"><i class="bi bi-person-gear me-2"></i> สมาชิกระบบ</a></li>
+        </ul>
+        <hr>
+        <a href="index.html" class="btn btn-outline-light btn-sm w-100 mb-2">หน้าเว็บผู้ใช้</a>
+        <button class="btn btn-danger btn-sm w-100" id="navLogout">ออกจากระบบ</button>
+    </div>
+
+    <div class="main-content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="fw-bold">Dashboard ภาพรวมระบบ</h2>
+            <span class="text-muted" id="currentDate"></span>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-3"><div class="card stat-card p-3 border-primary"><small class="text-muted">จำนวนสมาชิก</small><h3 id="userCount" class="fw-bold mb-0">0</h3></div></div>
+            <div class="col-md-3"><div class="card stat-card p-3 border-success"><small class="text-muted">คอร์สทั้งหมด</small><h3 id="courseCount" class="fw-bold mb-0">0</h3></div></div>
+            <div class="col-md-3"><div class="card stat-card p-3 border-warning"><small class="text-muted">รอตรวจสอบยอด</small><h3 id="pendingCount" class="fw-bold mb-0">0</h3></div></div>
+            <div class="col-md-3"><div class="card stat-card p-3 border-info"><small class="text-muted">รายได้รวม</small><h3 id="totalRevenue" class="fw-bold mb-0">฿0</h3></div></div>
+        </div>
+
+        <div class="row pt-4" id="section-courses">
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header bg-white fw-bold py-3"><i class="bi bi-plus-circle me-2"></i>เพิ่มคอร์สใหม่</div>
+                    <div class="card-body">
+                        <form id="addCourseForm">
+                            <div class="mb-3">
+                                <label class="form-label small">ชื่อบทเรียน</label>
+                                <input type="text" id="newCourseName" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small">ราคา (บาท)</label>
+                                <input type="number" id="newCoursePrice" class="form-control" value="0" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small">URL รูปภาพ</label>
+                                <input type="url" id="newCourseImage" class="form-control" placeholder="https://...">
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100 shadow-sm">บันทึกข้อมูล</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-8">
+                <div class="card p-0 overflow-hidden">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                        <span class="fw-bold">รายการคอร์สเรียนทั้งหมด</span>
+                        <input type="text" id="searchCourseInput" class="form-control form-control-sm w-50" placeholder="🔍 ค้นหาชื่อคอร์ส...">
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light"><tr><th>ID</th><th>คอร์ส</th><th>ราคา</th><th class="text-center">จัดการ</th></tr></thead>
+                            <tbody id="courseManageTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-5" id="section-enroll">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                <span class="fw-bold"><i class="bi bi-credit-card me-2"></i> ประวัติการสมัครเรียน & ออกเกียรติบัตร</span>
+                <input type="text" id="searchEnrollmentInput" class="form-control form-control-sm w-25" placeholder="🔍 ค้นหาชื่อ/สถานะ...">
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light"><tr><th class="ps-4">ผู้สมัคร</th><th>คอร์ส/ผู้สอน</th><th>ราคา</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
+                    <tbody id="enrollmentTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card mt-5" id="section-users">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                <span class="fw-bold">จัดการสมาชิกในระบบ</span>
+                <input type="text" id="searchUserInput" class="form-control form-control-sm w-25" placeholder="🔍 ค้นหาชื่อ/อีเมล...">
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light"><tr><th class="ps-4">ชื่อ-นามสกุล</th><th>อีเมล</th><th>บทบาท</th><th>รายวิชา</th><th class="text-center">จัดการ</th></tr></thead>
+                    <tbody id="userTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="editCourseModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title"><i class="bi bi-pencil-square"></i> แก้ไขคอร์สเรียน</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="editCourseForm">
+                    <div class="modal-body">
+                        <input type="hidden" id="editCourseId">
+                        <div class="mb-3"><label class="form-label">ชื่อคอร์ส</label><input type="text" id="editCourseName" class="form-control" required></div>
+                        <div class="mb-3"><label class="form-label">ราคา (บาท)</label><input type="number" id="editCoursePrice" class="form-control" required></div>
+                        <div class="mb-3"><label class="form-label">URL รูปภาพ</label><input type="url" id="editCourseImage" class="form-control"></div>
+                    </div>
+                    <div class="modal-footer"><button type="submit" class="btn btn-warning">บันทึกการแก้ไข</button></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="editUserModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">แก้ไขข้อมูลสมาชิก</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="editUserForm">
+                    <div class="modal-body">
+                        <input type="hidden" id="editUserId">
+                        <div class="mb-3"><label class="form-label">ชื่อ-นามสกุล</label><input type="text" id="editFullname" class="form-control" required></div>
+                        <div class="mb-3">
+                            <label class="form-label">บทบาท (Role)</label>
+                            <select id="editRole" class="form-select" onchange="toggleTeacherCourseSelect()">
+                                <option value="user">User (นักเรียน)</option>
+                                <option value="teacher">Teacher (ครู)</option>
+                                <option value="admin">Admin (ผู้ดูแลระบบ)</option>
+                            </select>
+                        </div>
+                        <div class="mb-3 d-none" id="teacherCourseSection">
+                            <label class="form-label text-primary fw-bold">วิชาที่รับผิดชอบ</label>
+                            <select id="editAssignedCourse" class="form-select"></select>
+                        </div>
+                        <div class="mb-3"><label class="form-label">รหัสผ่านใหม่ (เว้นว่างได้)</label><input type="password" id="editPassword" class="form-control"></div>
+                    </div>
+                    <div class="modal-footer"><button type="submit" class="btn btn-primary w-100">บันทึกการเปลี่ยนแปลง</button></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="certModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg border-0">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title"><i class="bi bi-award"></i> ตัวอย่างเกียรติบัตร</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center bg-light p-4">
+                    <canvas id="certCanvas" width="800" height="565"></canvas>
+                </div>
+                <div class="modal-footer bg-white">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิด</button>
+                    <button type="button" class="btn btn-success px-4" onclick="downloadCert()">
+                        <i class="bi bi-download me-2"></i> ดาวน์โหลดเกียรติบัตร
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/courses.js"></script>
+    <script src="js/admin.js"></script>
+    <script>
+        document.getElementById('currentDate').innerText = new Date().toLocaleDateString('th-TH', { dateStyle: 'long' });
+        
+        // ระบบค้นหา
+        function setupSearch(inputId, tableBodyId) {
+            const input = document.getElementById(inputId);
+            if(input) {
+                input.addEventListener('keyup', function() {
+                    const value = this.value.toLowerCase();
+                    const rows = document.querySelectorAll(`#${tableBodyId} tr`);
+                    rows.forEach(row => { row.style.display = row.innerText.toLowerCase().includes(value) ? '' : 'none'; });
+                });
+            }
+        }
+        setupSearch('searchCourseInput', 'courseManageTableBody');
+        setupSearch('searchEnrollmentInput', 'enrollmentTableBody');
+        setupSearch('searchUserInput', 'userTableBody');
+
+        // ระบบเกียรติบัตร
+        window.generateCert = (studentName, courseName) => {
+        const canvas = document.getElementById('certCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // 1. เคลียร์ Canvas และตั้งพื้นหลังเป็นสีขาวบริสุทธิ์
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // 2. วาดขอบเกียรติบัตร (Border) ให้ดูทางการ
+        ctx.strokeStyle = '#0d6efd'; // สีน้ำเงินหลัก
+        ctx.lineWidth = 15;
+        ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
+        
+        ctx.strokeStyle = '#ffc107'; // เส้นขอบในสีทอง
+        ctx.lineWidth = 2;
+        ctx.strokeRect(35, 35, canvas.width - 70, canvas.height - 70);
+
+        // 3. ตั้งค่าการเขียนข้อความ (Text Center)
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#1a1a1a'; // สีตัวอักษรเกือบดำ
+
+        // --- หัวข้อ ---
+        ctx.font = 'bold 40px "Sarabun"';
+        ctx.fillText("เกียรติบัตรฉบับนี้ให้ไว้เพื่อแสดงว่า", canvas.width / 2, 180);
+
+        // --- ชื่อนักเรียน (เน้นตัวใหญ่) ---
+        ctx.font = 'bold 60px "Sarabun"';
+        ctx.fillStyle = '#0d6efd'; 
+        ctx.fillText(studentName, canvas.width / 2, 280);
+
+        // --- รายละเอียดคอร์ส ---
+        ctx.fillStyle = '#444';
+        ctx.font = '24px "Sarabun"';
+        ctx.fillText("ได้สำเร็จการศึกษาตามหลักสูตรวิชา", canvas.width / 2, 340);
+
+        ctx.fillStyle = '#000';
+        ctx.font = 'bold 35px "Sarabun"';
+        ctx.fillText(courseName, canvas.width / 2, 390);
+
+        // --- วันที่ออกให้ ---
+        const dateStr = new Date().toLocaleDateString('th-TH', { 
+            day: 'numeric', 
+            month: 'long', 
+            year: 'numeric' 
+        });
+        ctx.fillStyle = '#666';
+        ctx.font = '20px "Sarabun"';
+        ctx.fillText(`ออกให้ ณ วันที่ ${dateStr}`, canvas.width / 2, 460);
+
+        // --- ตราประทับจำลอง (Optional) ---
+        ctx.strokeStyle = '#0d6efd';
+        ctx.beginPath();
+        ctx.arc(canvas.width - 100, canvas.height - 100, 40, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.font = 'bold 12px "Sarabun"';
+        ctx.fillText("MYCOURSE", canvas.width - 100, canvas.height - 105);
+        ctx.fillText("CERTIFIED", canvas.width - 100, canvas.height - 85);
+
+        // แสดง Modal
+        new bootstrap.Modal(document.getElementById('certModal')).show();
+    };
+
+        window.downloadCert = () => {
+            const canvas = document.getElementById('certCanvas');
+            const link = document.createElement('a');
+            link.download = `Certificate_${Date.now()}.png`;
+            link.href = canvas.toDataURL('image/png', 1.0);
+            link.click();
+        };
+
+        // ไฮไลท์เมนู Sidebar เมื่อเลื่อนหน้าจอ
+        window.addEventListener('scroll', () => {
+            let current = "";
+            const sections = document.querySelectorAll('.main-content > div[id]');
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (pageYOffset >= sectionTop - 100) {
+                    current = section.getAttribute('id');
+                }
+            });
+            document.querySelectorAll('.sidebar .nav-link').forEach(link => {
+                link.classList.remove('active');
+                link.classList.add('text-white');
+                if (link.getAttribute('href').includes(current)) {
+                    link.classList.add('active');
+                    link.classList.remove('text-white');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

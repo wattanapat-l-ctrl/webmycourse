@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>รายชื่อนักเรียน - สำหรับครู</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background-color: #f4f7f6; }
+        .card { border: none; border-radius: 15px; }
+        .student-count-card { background: linear-gradient(45deg, #0d6efd, #00d4ff); color: white; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="index.html">MyCourse Teacher</a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link text-white" href="teacher_dashboard.html"><i class="bi bi-calendar-event me-1"></i> ตารางเรียน</a>
+                <a class="nav-link text-white" href="index.html"><i class="bi bi-house-door me-1"></i> กลับหน้าหลัก</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row align-items-center mb-4">
+            <div class="col-md-7">
+                <h2 class="fw-bold">รายชื่อนักเรียนในวิชา</h2>
+                <p class="text-muted mb-0" id="courseDisplayName">วิชา: กำลังโหลด...</p>
+            </div>
+            <div class="col-md-5">
+                <div class="card student-count-card p-3 shadow-sm">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="small opacity-75">จำนวนนักเรียนทั้งหมด</div>
+                            <h3 class="mb-0 fw-bold" id="totalStudents">0 คน</h3>
+                        </div>
+                        <i class="bi bi-people fs-1 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4">ชื่อ-นามสกุล</th>
+                                <th>อีเมล</th>
+                                <th>เบอร์โทรศัพท์</th>
+                                <th>สถานะการสมัคร</th>
+                                <th class="text-center">ตรวจสอบ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentTableBody">
+                            <tr>
+                                <td colspan="5" class="text-center py-5 text-muted">กำลังโหลดข้อมูลนักเรียน...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/config.js"></script>
+
+    <script>
+        const user = getLoggedInUser();
+
+        // ตรวจสอบสิทธิ์ (Security Guard)
+        if (!user || user.role.toLowerCase() !== 'teacher') {
+            alert('คุณไม่มีสิทธิ์เข้าถึงหน้านี้');
+            window.location.href = 'index.html';
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const courseName = user.assigned_course;
+            document.getElementById('courseDisplayName').textContent = `วิชา: ${courseName || 'ยังไม่ได้ระบุวิชาที่สอน'}`;
+            
+            if (courseName) {
+                loadStudents(courseName);
+            } else {
+                document.getElementById('studentTableBody').innerHTML = `
+                    <tr><td colspan="5" class="text-center py-4 text-danger">คุณยังไม่ได้รับมอบหมายวิชาสอน กรุณาติดต่อ Admin</td></tr>`;
+            }
+        });
+
+        async function loadStudents(courseName) {
+            const tableBody = document.getElementById('studentTableBody');
+            
+            // ดึงข้อมูลจากตาราง enrollments เฉพาะวิชาที่ครูสอน
+            const { data, error } = await supabaseClient
+                .from('enrollments')
+                .select('*')
+                .eq('course_name', courseName)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                tableBody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">เกิดข้อผิดพลาด: ${error.message}</td></tr>`;
+                return;
+            }
+
+            document.getElementById('totalStudents').textContent = `${data.length} คน`;
+
+            if (data.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="5" class="text-center py-5 text-muted">ยังไม่มีนักเรียนสมัครเรียนในวิชานี้</td></tr>`;
+                return;
+            }
+
+            tableBody.innerHTML = data.map(item => `
+                <tr>
+                    <td class="ps-4 fw-bold">${item.fullname}</td>
+                    <td>${item.email}</td>
+                    <td>${item.phone || '-'}</td>
+                    <td>
+                        ${getStatusBadge(item.status)}
+                    </td>
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-outline-primary rounded-pill" onclick="viewContact('${item.phone}', '${item.email}')">
+                            <i class="bi bi-chat-dots"></i> ติดต่อ
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function getStatusBadge(status) {
+            switch(status) {
+                case 'success':
+                    return '<span class="badge bg-success-subtle text-success border border-success px-3">ชำระเงินแล้ว</span>';
+                case 'pending_check':
+                    return '<span class="badge bg-warning-subtle text-warning-dark border border-warning px-3">รอตรวจสอบ</span>';
+                default:
+                    return `<span class="badge bg-secondary px-3">${status}</span>`;
+            }
+        }
+
+        function viewContact(phone, email) {
+            alert(`ข้อมูลการติดต่อ\nอีเมล: ${email}\nเบอร์โทร: ${phone}`);
+        }
+    </script>
+
+    <style>
+        .text-warning-dark { color: #856404; }
+        .bg-success-subtle { background-color: #d1e7dd; }
+        .bg-warning-subtle { background-color: #fff3cd; }
+    </style>
+</body>
+</html>

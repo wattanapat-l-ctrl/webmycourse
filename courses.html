@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>สมัครคอร์สเรียน - MyCourse</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        .transition-hover:hover { transform: translateY(-5px); transition: 0.3s; }
+    </style>
+</head>
+<body class="bg-light">
+
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm sticky-top">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="index.html">MyCourse</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <div class="navbar-nav me-auto">
+                    <a class="nav-link" href="index.html">หน้าหลัก</a>
+                    <a class="nav-link active" href="courses.html">สมัครคอร์สเรียน</a>
+                    <a class="nav-link" href="#contact">ติดต่อเรา</a>
+                </div>
+                <div class="navbar-nav align-items-center">
+                    <a class="nav-link" href="login.html" id="navLogin">เข้าสู่ระบบ</a>
+                    <a class="nav-link" href="register.html" id="navRegister">สมัครสมาชิก</a>
+
+                    <div class="nav-item dropdown d-none" id="navUserDropdown">
+                        <a class="nav-link dropdown-toggle text-white fw-bold" href="#" id="navWelcome" role="button"
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                            ชื่อสมาชิก
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                            <li id="studentMenuSection">
+                                <button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#myCoursesModal" onclick="loadMyCourses()">
+                                    <i class="bi bi-book me-2 text-primary"></i> คอร์สเรียนของฉัน
+                                </button>
+                            </li>
+
+                            <li id="teacherMenuSection" class="d-none">
+                                <hr class="dropdown-divider">
+                                <h6 class="dropdown-header fw-bold text-dark"><i class="bi bi-person-workspace me-2"></i>สำหรับครูผู้สอน</h6>
+                                <a class="dropdown-item teacher-menu-item" href="teacher_dashboard.html">
+                                    <i class="bi bi-calendar-check me-2 text-warning"></i> จัดการตารางเรียน
+                                </a>
+                                <a class="dropdown-item teacher-menu-item" href="teacher_students.html">
+                                    <i class="bi bi-people me-2 text-warning"></i> รายชื่อนักเรียน
+                                </a>
+                            </li>
+
+                            <li id="adminMenuSection" class="d-none">
+                                <hr class="dropdown-divider">
+                                <a class="dropdown-item fw-bold text-danger" href="admin.html" id="navAdmin">
+                                    <i class="bi bi-shield-lock me-2"></i> แผงควบคุม Admin
+                                </a>
+                            </li>
+
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="#" id="navLogoutAction">ออกจากระบบ</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-5">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold">คอร์สเรียนทั้งหมด</h2>
+            <p class="text-muted">เลือกคอร์สที่ใช่ เพื่ออนาคตที่คุณออกแบบเอง</p>
+        </div>
+
+        <div class="row justify-content-center mb-5">
+            <div class="col-md-6">
+                <div class="input-group shadow-sm rounded-pill overflow-hidden bg-white border">
+                    <span class="input-group-text bg-white border-0 ps-4">
+                        <i class="bi bi-search"></i>
+                    </span>
+                    <input type="text" id="searchInput" class="form-control border-0 py-3"
+                        placeholder="ค้นหาชื่อคอร์สเรียนที่คุณสนใจ...">
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4" id="coursesGrid">
+            </div>
+    </div>
+
+    <div class="modal fade" id="enrollModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header bg-primary text-white border-0 py-3">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square me-2"></i>ยืนยันการลงทะเบียน</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="text-center mb-4">
+                        <small class="text-muted d-block">วิชาที่คุณเลือก</small>
+                        <h4 id="modalCourseName" class="fw-bold text-primary mb-1">---</h4>
+                        <h5 class="text-success fw-bold">ราคา ฿<span id="modalCoursePrice">0</span></h5>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">ชื่อผู้สมัคร</label>
+                        <input type="text" id="modalUserFullname" class="form-control bg-light border-0 fw-bold" readonly>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">เลือกครูผู้สอน <span class="text-danger">*</span></label>
+                        <select id="displayInstructor" class="form-select border-primary" required>
+                            <option value="">-- กำลังโหลดรายชื่อครู --</option>
+                        </select>
+                        <div class="form-text text-primary small">* โปรดเลือกครูผู้สอนที่คุณต้องการเข้าเรียนด้วย</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">เบอร์โทรศัพท์ติดต่อ <span class="text-danger">*</span></label>
+                        <input type="tel" id="modalUserPhone" class="form-control form-control-lg border-primary" placeholder="08x-xxx-xxxx" maxlength="10">
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm" onclick="confirmEnroll()">
+                        ยืนยันและไปที่หน้าชำระเงิน <i class="bi bi-arrow-right-short"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="myCoursesModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-book me-2"></i>คอร์สเรียนของฉัน</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="list-group list-group-flush" id="myCoursesList">
+                        </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="contact" class="container mt-5 mb-5 pt-5 border-top">
+        <div class="row g-5">
+            <div class="col-md-6">
+                <h2 class="fw-bold mb-4">ติดต่อเรา</h2>
+                <p class="text-muted">หากคุณมีข้อสงสัยเกี่ยวกับหลักสูตรหรือต้องการความช่วยเหลือ สามารถติดต่อทีมงานของเราได้ทุกช่องทาง</p>
+
+                <div class="mt-4">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="bg-primary text-white rounded-circle p-2 me-3 shadow-sm">
+                            <i class="bi bi-geo-alt"></i>
+                        </div>
+                        <span>123 ถนนสุขุมวิท แขวงคลองเตย กรุงเทพฯ 10110</span>
+                    </div>
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="bg-success text-white rounded-circle p-2 me-3 shadow-sm">
+                            <i class="bi bi-telephone"></i>
+                        </div>
+                        <span>02-123-4567 (จันทร์-ศุกร์ 09:00 - 18:00)</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card shadow-sm border-0 p-4 rounded-4 bg-white">
+                    <h5 class="fw-bold mb-3">ส่งข้อความถึงเรา</h5>
+                    <form id="contactForm">
+                        <div class="mb-3"><input type="text" class="form-control" placeholder="ชื่อของคุณ" required></div>
+                        <div class="mb-3"><input type="email" class="form-control" placeholder="อีเมล" required></div>
+                        <div class="mb-3"><textarea class="form-control" rows="3" placeholder="ข้อความที่ต้องการติดต่อ" required></textarea></div>
+                        <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 fw-bold">ส่งข้อความ</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="scheduleModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-calendar3 me-2"></i> รายละเอียดการเรียน</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="scheduleBody">
+                    </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-dark text-white py-5">
+        <div class="container text-center">
+            <p class="mb-2">© 2026 MyCourse - แพลตฟอร์มการเรียนรู้ออนไลน์ที่ดีที่สุด</p>
+            <div class="fs-4">
+                <a href="#" class="text-white me-3"><i class="bi bi-facebook"></i></a>
+                <a href="#" class="text-white me-3"><i class="bi bi-line"></i></a>
+                <a href="#" class="text-white"><i class="bi bi-twitter-x"></i></a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/courses.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+</html>
